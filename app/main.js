@@ -8,10 +8,13 @@ const {
   session,
   screen,
   Tray,
+  TouchBar,
+  nativeImage,
 } = electron;
 const Store = require("electron-store");
 const { autoUpdater } = require("electron-updater");
 const { join } = require("path");
+const { TouchBarLabel, TouchBarButton, TouchBarSpacer } = TouchBar;
 
 const store = new Store();
 const iconPath = join(__dirname, "/listen1_chrome_extension/images/logo.png");
@@ -279,10 +282,56 @@ const pauseButton = {
 };
 const setThumbarPause = () => {
   mainWindow?.setThumbarButtons([previousButton, playButton, nextButton]);
+  playTouchbarButton.icon = nativeImage.createFromPath(join(__dirname, "/resources/play-song.png"));
 };
 const setThumbbarPlay = () => {
   mainWindow?.setThumbarButtons([previousButton, pauseButton, nextButton]);
+  playTouchbarButton.icon = nativeImage.createFromPath(join(__dirname, "/resources/pause-song.png"));
 };
+
+const touchBarBackground = "#b6b6b6";
+// Touchbar Control buttons
+const prevTouchbarButton = new TouchBarButton({
+  backgroundColor: touchBarBackground,
+  icon: nativeImage.createFromPath(join(__dirname, "/resources/prev-song.png")),
+  click: () => {
+    mainWindow.webContents.send("globalShortcut", "left");
+  },
+});
+const playTouchbarButton = new TouchBarButton({
+  backgroundColor: touchBarBackground,
+  icon: nativeImage.createFromPath(join(__dirname, "/resources/play-song.png")),
+  click: () => {
+    mainWindow.webContents.send("globalShortcut", "space");
+  },
+});
+const nextTouchbarButton = new TouchBarButton({
+  backgroundColor: touchBarBackground,
+  icon: nativeImage.createFromPath(join(__dirname, "/resources/next-song.png")),
+  click: () => {
+    mainWindow.webContents.send("globalShortcut", "right");
+  },
+});
+
+// Touchbar lyrics bar
+const lyricBar = new TouchBarLabel({
+  label: "lyrics here",
+  textColor: touchBarBackground,
+});
+
+const touchBar = new TouchBar({
+  items: [
+    new TouchBarSpacer({ size: "small" }),
+    prevTouchbarButton,
+    new TouchBarSpacer({ size: "small" }),
+    playTouchbarButton,
+    new TouchBarSpacer({ size: "small" }),
+    nextTouchbarButton,
+    new TouchBarSpacer({ size: "large" }),
+    lyricBar,
+  ],
+});
+
 
 function createWindow() {
   const filter = {
@@ -470,6 +519,8 @@ function createWindow() {
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
+  mainWindow.setTouchBar(touchBar);
+
   initialTray(mainWindow);
 }
 
@@ -600,6 +651,11 @@ ipcMain.on("currentLyric", (event, arg) => {
       floatingWindow.webContents.send("currentLyric", arg.lyric);
       floatingWindow.webContents.send("currentLyricTrans", arg.tlyric);
     }
+  }
+  if (typeof arg === "string") {
+    lyricBar.label = arg;
+  } else {
+    lyricBar.label = arg.lyric;
   }
 });
 
